@@ -787,7 +787,9 @@ def denss(q, I, sigq, dmax, ne=None, voxel=5., oversampling=3., limit_dmax=False
     shrinkwrap_iter=20, shrinkwrap_minstep=100, chi_end_fraction=0.01,
     write_xplor_format=False, write_freq=100, enforce_connectivity=True,
     enforce_connectivity_steps=[500], cutout=True, quiet=False, ncs=0,
-    ncs_steps=[500],ncs_axis=1, abort_event=None, my_logger=logging.getLogger(),
+    ncs_steps=[500],ncs_axis=1, d_sym=0, d_steps=[500], d_axis=1, o_sym=0, 
+    o_steps=[500], o_axis=1,
+    abort_event=None, my_logger=logging.getLogger(),
     path='.', gui=False, DENSS_GPU=False):
     """Calculate electron density from scattering data."""
     if abort_event is not None:
@@ -1045,7 +1047,7 @@ def denss(q, I, sigq, dmax, ne=None, voxel=5., oversampling=3., limit_dmax=False
             if mysum(newrho, DENSS_GPU=DENSS_GPU) != 0:
                 newrho *= netmp / mysum(newrho, DENSS_GPU=DENSS_GPU)
 
-        #apply non-crystallographic symmetry averaging
+        # NCS AVERAGING
         if ncs != 0 and j in ncs_steps:
             if DENSS_GPU: 
                 newrho = cp.asnumpy(newrho) 
@@ -1066,6 +1068,52 @@ def denss(q, I, sigq, dmax, ne=None, voxel=5., oversampling=3., limit_dmax=False
             newrho = newrhosym/ncs
             if DENSS_GPU:
                 newrho = cp.array(newrho)
+                
+                
+        # D SYMMETRY
+        if d_sym != 0 and j in d_steps:
+            newrho = align2xyz(newrho)
+
+        if d_sym != 0 and j in [stepi+1 for stepi in d_steps]:    
+            degrees = 360./d_sym
+            if d_axis == 1: 
+                axes=(1,2)
+                axes2=(0,2)
+            if d_axis == 2: 
+                axes=(0,2)
+                axes2=(0,1)
+            if d_axis == 3: 
+                axes=(0,1)
+                axes2=(1,2)
+            newrhosym = newrho*0.0
+            for nrot in range(0,d_sym+1):
+                newrhosym += ndimage.rotate(newrho,degrees*nrot,axes=axes,reshape=False)
+            newrho = newrhosym/d_sym
+
+            degrees = 180
+            newrho += ndimage.rotate(newrho, degrees, axes=axes2, reshape = False)
+            newrho = newrho/2
+
+                
+        # O SYMMETRY
+        if o_sym !=0 and j in o_steps:
+            newrho = align2xyz(newrho)
+        if o_sym != 0 and j in [stepi+1 for stepi in o_steps]:
+            axis1 = (1,2)
+            axis2 = (0,2)
+            axis3 = (0,1)
+            degrees = 360/4
+            newrhosym = newrho*0.0
+            for nrot in range(1,5):
+                newrho += ndimage.rotate(newrho,degrees*nrot,axes=axis1,reshape=False)
+            for nrot in range(1,5):
+                newrho += ndimage.rotate(newrho,degrees*nrot,axes=axis2,reshape=False)
+            for nrot in range(1,5):
+                newrho += ndimage.rotate(newrho,degrees*nrot,axes=axis3,reshape=False)                
+            newrho = newrho/12
+            
+            
+        
 
         if recenter and j in recenter_steps:
             if DENSS_GPU: 
