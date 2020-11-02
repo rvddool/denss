@@ -1104,11 +1104,11 @@ def denss(q, I, sigq, dmax, ne=None, voxel=5., oversampling=3., limit_dmax=False
             axis3 = (0,1)
             degrees = 360/4
             newrhosym = newrho*0.0
-            for nrot in range(1,5):
+            for nrot in range(0,5):
                 newrho += ndimage.rotate(newrho,degrees*nrot,axes=axis1,reshape=False)
-            for nrot in range(1,5):
+            for nrot in range(0,5):
                 newrho += ndimage.rotate(newrho,degrees*nrot,axes=axis2,reshape=False)
-            for nrot in range(1,5):
+            for nrot in range(0,5):
                 newrho += ndimage.rotate(newrho,degrees*nrot,axes=axis3,reshape=False)                
             newrho = newrho/12
             
